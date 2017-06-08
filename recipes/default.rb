@@ -76,8 +76,9 @@ bash "install-collectd" do
   cwd Chef::Config[:file_cache_path]
   code <<-EOH
     tar -xzf collectd-#{node["collectd"]["version"]}.tar.gz
-    (cd collectd-#{node["collectd"]["version"]} && ./configure --prefix=#{node["collectd"]["dir"]} #{node["collectd"]["configure_flag"]} && make -j #{(node['cpu']['total'].to_i + 1)} && make install)
+    (cd collectd-#{node["collectd"]["version"]} && ./configure --prefix=#{node["collectd"]["dir"]} #{node["collectd"]["configure_flag"]} && make && make install)
   EOH
+  environment ({'MAKEFLAGS' => "-j #{(node['cpu']['total'].to_i + 1)}"})
   not_if "#{node["collectd"]["dir"]}/sbin/collectd -h 2>&1 | grep #{node["collectd"]["version"]}"
 end
 
@@ -94,6 +95,7 @@ template "/etc/init.d/collectd" do
   )
   notifies :restart, "service[collectd]"
   not_if { node["init_package"] == "systemd" }
+  sensitive true
 end
 
 template "/usr/lib/systemd/system/collectd.service" do
@@ -103,6 +105,7 @@ template "/usr/lib/systemd/system/collectd.service" do
   )
   notifies :restart, "service[collectd]"
   only_if { node["init_package"] == "systemd" }
+  sensitive true
 end
 
 template "#{node["collectd"]["dir"]}/etc/collectd.conf" do
@@ -120,6 +123,7 @@ template "#{node["collectd"]["dir"]}/etc/collectd.conf" do
     :plugins      => node["collectd"]["plugins"]
   )
   notifies :restart, "service[collectd]"
+  sensitive true
 end
 
 directory node["collectd"]["plugins_conf_dir"] do
